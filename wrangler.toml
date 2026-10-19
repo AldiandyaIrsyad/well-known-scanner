@@ -1,0 +1,25 @@
+name = "well-known-checker"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Regenerates public/checks.json from src/checks/list.ts before `wrangler dev` and `wrangler deploy`.
+[build]
+command = "node scripts/dump-checks.ts"
+watch_dir = "src/checks"
+
+# Static frontend. Asset requests are free and don't count as Worker invocations;
+# only /api/* runs the Worker.
+[assets]
+directory = "./public"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# Per-IP rate limit: 20 calls per minute (each scan is 2 calls). Free, but remove this block if your
+# account doesn't have the Rate Limiting binding; the Worker skips it when absent.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60

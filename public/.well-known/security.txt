@@ -1,6 +1,5 @@
 # Security contact for wellknown.aldiandyainf.com (RFC 9116)
-# TODO before deploy: replace YOUR_GITHUB_USERNAME below.
-Contact: https://github.com/YOUR_GITHUB_USERNAME/well-known-checker/security/advisories/new
+Contact: https://github.com/AldiandyaIrsyad/well-known-checker/security/advisories/new
 Expires: 2027-10-20T00:00:00Z
 Preferred-Languages: en, id
 Canonical: https://wellknown.aldiandyainf.com/.well-known/security.txt

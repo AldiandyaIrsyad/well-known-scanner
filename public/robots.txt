@@ -1,0 +1,4 @@
+# Crawlers are welcome to read the site, but not to trigger scans of other domains.
+User-agent: *
+Allow: /
+Disallow: /api/

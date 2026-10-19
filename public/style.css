@@ -187,7 +187,22 @@ pre {
   word-break: break-word;
 }
 
-footer { color: var(--muted); font-size: 13px; padding-bottom: 48px; }
+.about { padding-top: 24px; padding-bottom: 8px; border-top: 1px solid var(--line); margin-top: 16px; }
+.about h2 { font-size: 20px; margin: 0 0 4px; font-family: var(--mono); letter-spacing: -0.01em; }
+.about h3 { font-size: 15px; margin: 20px 0 6px; }
+.about p, .about li { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 70ch; }
+.about p { margin: 0; }
+.about ul { margin: 0; padding-left: 20px; }
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: var(--muted);
+  font-size: 13px;
+  padding-top: 20px;
+  padding-bottom: 48px;
+}
 
 @media (max-width: 520px) {
   header { padding-top: 28px; }
@@ -196,3 +211,4 @@ footer { color: var(--muted); font-size: 13px; padding-bottom: 48px; }
   button[type="submit"] { padding: 12px; }
 }
 .hostnote { font-size: 14px; background: var(--none-bg); padding: 8px 12px; border-radius: 8px; margin: 14px 0 0; }
+.notfound { padding-top: 64px; }

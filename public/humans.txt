@@ -1,0 +1,7 @@
+/* TEAM */
+Built by: Aldiandya Irsyad
+Site: https://aldiandyainf.com
+
+/* SITE */
+Stack: TypeScript, Cloudflare Workers, plain HTML/CSS/JS
+Standards: RFC 8615 (well-known URIs), RFC 9116 (security.txt), RFC 9309 (robots.txt)

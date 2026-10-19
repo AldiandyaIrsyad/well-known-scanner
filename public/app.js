@@ -58,7 +58,7 @@ async function init() {
     showError("Couldn't load checks.json. Run `npm run build` first.");
     return;
   }
-  $("count").textContent = CHECKS.length;
+  document.querySelectorAll(".js-count").forEach((el) => (el.textContent = CHECKS.length));
   const d = new URLSearchParams(location.search).get("d");
   if (d) start(d);
 }

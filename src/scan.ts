@@ -3,7 +3,8 @@ import { batchOf, canaryPaths, isWellKnown, urlFor } from "./checks/checks.ts";
 import type { Probe, ScanEvent } from "./checks/types.ts";
 
 export const MAX_BODY = 64 * 1024; // bytes kept per response
-export const USER_AGENT = "WellKnownChecker/1.0 (checks /.well-known/ URIs and standard root files)";
+// Names the site so admins who see it in their logs know what it is and who to contact.
+export const USER_AGENT = "WellKnownChecker/1.0 (+https://wellknown.aldiandyainf.com/#about)";
 
 export interface ScanOptions {
   /** Injected for tests; defaults to the global fetch. */

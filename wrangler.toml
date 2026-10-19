@@ -11,7 +11,7 @@ watch_dir = "src/checks"
 # only /api/* runs the Worker.
 [assets]
 directory = "./public"
-not_found_handling = "single-page-application"
+not_found_handling = "404-page"
 run_worker_first = ["/api/*"]
 
 # Per-IP rate limit: 20 calls per minute (each scan is 2 calls). Free, but remove this block if your

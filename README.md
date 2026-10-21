@@ -5,6 +5,8 @@ WebFinger, MTA-STS, A2A agent cards, …) and root files (robots.txt, ads.txt, l
 crossdomain.xml, …) it serves, whether each is valid, and what each one is for. It's meant as a way
 for developers to discover files they didn't know existed.
 
+**Live: https://wellknown.aldiandyainf.com/**
+
 Built with TypeScript on Cloudflare Workers; the frontend is plain HTML/CSS/JS.
 
 ## How it works

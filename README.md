@@ -1,18 +1,30 @@
 # Well-Known Checker
 
-Enter a domain and see which `/.well-known/` URIs (security.txt, OpenID discovery, app links,
-WebFinger, MTA-STS, A2A agent cards, …) and root files (robots.txt, ads.txt, llms.txt, humans.txt,
-crossdomain.xml, …) it serves, whether each is valid, and what each one is for. It's meant as a way
-for developers to discover files they didn't know existed.
+Find out which `/.well-known/` files a website serves, whether they're valid, and what each one is for.
 
-**Live: https://wellknown.aldiandyainf.com/**
+**Try it: https://wellknown.aldiandyainf.com/**
 
-Built with TypeScript on Cloudflare Workers; the frontend is plain HTML/CSS/JS.
+Enter a domain and the checker looks for about 90 standard files, including `security.txt`, OpenID
+discovery, app links, WebFinger, MTA-STS and A2A agent cards. It also checks root files such as
+`robots.txt`, `ads.txt`, `llms.txt`, `humans.txt` and `crossdomain.xml`. Each result is validated
+and comes with a plain-language explanation, so it's a good way to discover files you didn't know
+existed.
+
+## Features
+
+- Scans `/.well-known/` URIs and common root files in one pass, with results streamed as they arrive
+- Validates content, not just status codes, and detects catch-all servers that return 200 for everything
+- Explains every check: what the file is, who reads it, and why you might want it
+- No accounts and no data stored; the frontend is plain HTML, CSS and JS
 
 ## How it works
 
+Browsers can't read `https://other-site/.well-known/*` unless that site sends CORS headers, and most
+don't. So the scan runs in a Cloudflare Worker (TypeScript) that fetches the files and returns a
+verdict for each one.
+
 ```
-browser ──GET index.html, app.js, checks.json──▶ Workers Assets (static, free)
+browser ──GET index.html, app.js, checks.json──▶ Workers Assets (static)
         ──GET /api/check?domain=x&batch=0──┐
         ──GET /api/check?domain=x&batch=1──┤ in parallel
                                            ▼
@@ -23,21 +35,16 @@ browser ──GET index.html, app.js, checks.json──▶ Workers Assets (stati
                             4. judge each response, stream it back as one NDJSON line
 ```
 
-- **Why a backend at all:** browsers can't read `https://other-site/.well-known/*` unless that site
-  sends CORS headers, and most don't.
-- **Why batches:** a Worker invocation on the free plan may make 50 outbound requests. 90 checks
-  are split into 2 batches of ≤46 (+1 homepage +2 canaries = 49).
-- **Capacity on Workers Free:** static asset requests are free and unlimited. Each complete scan
-  uses 2 Worker requests, so the account's shared 100,000-request daily allowance supports up to
-  ~50,000 scans, less other API requests and usage by other Workers. The allowance resets at
-  midnight UTC (07:00 in Jakarta). This is a request-budget estimate, not a load-test result;
-  the Free plan also limits each invocation to 10 ms of CPU time. Upstream responses are cached
-  at the edge for 5 minutes, but cached upstream fetches do not reduce the 2 API calls per scan.
-- **Abuse guards:** only fetches paths from the fixed list, never follows redirects (except the
-  www hop), rejects IPs, `localhost` and internal TLDs, keeps at most 64 KB per response, and
-  rate-limits each IP to 20 calls/min (10 scans).
+The checks are split into two batches because a Worker invocation on the Cloudflare free plan may
+make at most 50 outbound requests.
 
-## Layout
+### Safety
+
+The checker only fetches paths from its fixed list. It never follows redirects (apart from the
+`www` hop), rejects IP addresses, `localhost` and internal TLDs, keeps at most 64 KB per response,
+and rate-limits each IP to 20 calls per minute.
+
+## Project layout
 
 ```
 src/checks/list.ts     every check and its plain-language explanation
@@ -50,10 +57,7 @@ scripts/dump-checks.ts generates public/checks.json from the list (runs on dev/d
 test/                  Vitest suites
 ```
 
-To add a check, append to `src/checks/list.ts` with a `learn` explanation. If it needs a new kind
-of validation, add a case in `analyze.ts` and a test. Batches are computed automatically.
-
-## Develop
+## Run locally
 
 ```bash
 npm install
@@ -62,7 +66,12 @@ npm test            # Vitest
 npm run typecheck
 ```
 
-## Deploy
+## Contributing
+
+To add a check, append an entry to `src/checks/list.ts` with a `learn` explanation. If it needs a new
+kind of validation, add a case in `analyze.ts` and a test. Batches are computed automatically.
+
+## Deploy your own
 
 ```bash
 npx wrangler login  # once, opens the browser
@@ -70,5 +79,5 @@ npm run deploy      # prints https://well-known-checker.<your-subdomain>.workers
 ```
 
 `wrangler.toml` attaches `wellknown.aldiandyainf.com` as a Custom Domain and also enables the
-`workers.dev` address. Deploy from the Cloudflare account that owns the active
-`aldiandyainf.com` zone. Cloudflare creates the Custom Domain's DNS record and certificate.
+`workers.dev` address. To deploy your own copy, change or remove the `routes` entry so it points at
+a zone in your Cloudflare account.

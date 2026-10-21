@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BATCH_COUNT } from "../src/checks/checks.ts";
 import { CHECKS } from "../src/checks/list.ts";
 import type { ScanEvent } from "../src/checks/types.ts";
-import { MAX_BODY, USER_AGENT, scanBatch } from "../src/scan.ts";
+import { FROM, MAX_BODY, USER_AGENT, scanBatch } from "../src/scan.ts";
 
 type Handler = (url: URL, init?: RequestInit) => Response | Promise<Response>;
 
@@ -25,9 +25,11 @@ async function scanAll(domain: string, f: typeof fetch, timeoutMs = 2000) {
 describe("scanBatch", () => {
   it("finds files, follows nothing, caps bodies", async () => {
     let ua = "";
+    let from = "";
     const f = fakeFetch({
       "/.well-known/nodeinfo": (_u, init) => {
         ua = new Headers(init?.headers).get("user-agent") ?? "";
+        from = new Headers(init?.headers).get("from") ?? "";
         return Response.json({ links: [{ rel: "x" }] });
       },
       "/.well-known/change-password": () => new Response(null, { status: 302, headers: { location: "/settings/password" } }),
@@ -39,6 +41,7 @@ describe("scanBatch", () => {
     expect(meta).toMatchObject({ domain: "example.com", host: "example.com" });
     expect(results.size).toBe(CHECKS.length);
     expect(ua).toBe(USER_AGENT);
+    expect(from).toBe(FROM);
     expect(results.get("/.well-known/nodeinfo")?.state).toBe("found");
     expect(results.get("/.well-known/change-password")?.state).toBe("found");
     expect(results.get("/robots.txt")?.note).toContain("GPTBot");
@@ -46,6 +49,21 @@ describe("scanBatch", () => {
     const jwks = results.get("/.well-known/jwks.json")!.probe;
     expect(jwks.truncated).toBe(true);
     expect(jwks.size).toBe(MAX_BODY);
+  });
+
+  it("reports homepage easter eggs without shipping the page or its headers", async () => {
+    const f = fakeFetch({
+      "/": () => new Response("<html><!-- Hello, developer! We're hiring. --></html>", {
+        headers: { "content-type": "text/html", "x-clacks-overhead": "GNU Terry Pratchett" },
+      }),
+    });
+    const { results } = await scanAll("example.com", f);
+    const home = results.get("/")!;
+    expect(home.state).toBe("found");
+    expect(home.egg).toContain("GNU Terry Pratchett");
+    expect(home.egg).toContain("We're hiring");
+    expect(home.probe.body).toBeUndefined();
+    expect(home.probe.headers).toBeUndefined();
   });
 
   it("switches to the www host when the homepage redirects there", async () => {

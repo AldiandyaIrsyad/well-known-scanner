@@ -161,8 +161,10 @@ function render() {
   const chips = ORDER.filter((s) => counts[s])
     .map((s) => `<span class="chip s-${s}">${counts[s]} ${LABELS[s].toLowerCase()}</span>`)
     .join("");
+  const eggs = [...current.results.values()].filter((r) => r.egg).length;
+  const eggChip = eggs ? `<span class="chip s-egg">${eggs} easter egg${eggs > 1 ? "s" : ""}</span>` : "";
   const timing = current.done ? `<span class="chip s-pending">${(current.ms / 1000).toFixed(1)}s</span>` : "";
-  $("chips").innerHTML = chips + timing;
+  $("chips").innerHTML = chips + eggChip + timing;
 
   // Keep open <details> open across re-renders.
   const open = new Set([...document.querySelectorAll("#results details[open]")].map((d) => d.dataset.path));
@@ -170,12 +172,18 @@ function render() {
   let html = "";
   for (const sec of SECTIONS) {
     const checks = CHECKS.filter(sec.test);
-    const found = checks.filter((c) => !["missing", "pending"].includes(stateOf(c))).length;
+    const found = checks.filter((c) => !["missing", "pending", "error", "soft404"].includes(stateOf(c))).length;
     let body = "";
-    for (const cat of new Set(checks.map((c) => c.cat))) {
-      const shown = checks.filter((c) => c.cat === cat && (showAll || !HIDDEN_BY_DEFAULT.includes(stateOf(c))));
+    const groups = [
+      { title: "Useful starting points", checks: checks.filter((c) => c.featured), blurb: "Security contact, account shortcuts, and mobile app links. Choose the ones that fit your site. Missing entries stay visible in gray." },
+      ...[...new Set(checks.filter((c) => !c.featured).map((c) => c.cat))].map((cat) => ({
+        title: cat, checks: checks.filter((c) => !c.featured && c.cat === cat),
+      })),
+    ];
+    for (const group of groups) {
+      const shown = group.checks.filter((c) => c.featured || showAll || !HIDDEN_BY_DEFAULT.includes(stateOf(c)));
       if (!shown.length) continue;
-      body += `<div class="group"><h3>${esc(cat)}</h3><div class="list">`;
+      body += `<div class="group"><h3>${esc(group.title)}</h3>${group.blurb ? `<p class="group-blurb">${esc(group.blurb)}</p>` : ""}<div class="list">`;
       for (const c of shown) body += row(c, open.has(c.path));
       body += `</div></div>`;
     }
@@ -200,9 +208,13 @@ function row(c, isOpen) {
   const state = r?.state || "pending";
   const p = r?.probe;
   const url = p?.url || urlFor(c);
-  const tag = c.experimental ? `<span class="tag">experimental</span>` : c.deprecated ? `<span class="tag">deprecated</span>` : "";
+  const tag =
+    (c.experimental ? `<span class="tag">experimental</span>` : c.deprecated ? `<span class="tag">deprecated</span>` : "") +
+    (r?.egg ? `<span class="tag tag-egg">easter egg</span>` : "");
 
-  let detail = `<div class="detail"><p class="learn">${esc(c.learn)}</p><p class="docs">`;
+  let detail = `<div class="detail">`;
+  if (r?.egg) detail += `<div class="egg"><strong>Hidden message</strong><pre>${esc(r.egg)}</pre></div>`;
+  detail += `<p class="learn">${esc(c.learn)}</p><p class="docs">`;
   if (c.mdn) detail += `<a href="${esc(c.mdn)}" target="_blank" rel="noopener">MDN docs ↗</a>`;
   detail += `<a href="${esc(c.spec)}" target="_blank" rel="noopener">Spec · ${esc(hostOf(c.spec))} ↗</a></p>`;
   const meta = [

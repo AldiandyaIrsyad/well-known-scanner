@@ -3,20 +3,23 @@ import type { Check } from "./types.ts";
 // Every file the checker looks for. `learn` is the plain-language "what is this and why would
 // I care" shown when a row is opened: the point of the site is teaching people these exist.
 //
-// Order matters: it is the display order, and batches are consecutive slices of it.
+// Order matters: featured checks are displayed first, then topic groups; batches are
+// consecutive slices of this list.
 export const CHECKS: Check[] = [
   // ───── /.well-known/ ─────
   {
-    path: "/.well-known/security.txt", cat: "Security & policy", kind: "securitytxt",
-    desc: "Vulnerability disclosure contact",
-    spec: "https://www.rfc-editor.org/rfc/rfc9116",
-    learn: "Tells security researchers who to contact when they find a bug in your site. Without it, people who find a hole often don't know who to tell. Generate one at securitytxt.org.",
-  },
-  {
     path: "/.well-known/change-password", cat: "Security & policy", kind: "redirect",
+    featured: true,
     desc: "Password-change page shortcut",
     spec: "https://w3c.github.io/webappsec-change-password-url/",
     learn: "A redirect to your 'change password' page. Password managers (Chrome, 1Password, iCloud Keychain) use it to send users straight there when a password is weak or leaked. It's a single redirect rule.",
+  },
+  {
+    path: "/.well-known/security.txt", cat: "Security & policy", kind: "securitytxt",
+    featured: true,
+    desc: "Vulnerability disclosure contact",
+    spec: "https://www.rfc-editor.org/rfc/rfc9116",
+    learn: "Tells security researchers who to contact when they find a bug in your site. Without it, people who find a hole often don't know who to tell. Generate one at securitytxt.org.",
   },
   {
     path: "/.well-known/mta-sts.txt", cat: "Security & policy", kind: "mtasts",
@@ -114,6 +117,7 @@ export const CHECKS: Check[] = [
   },
   {
     path: "/.well-known/passkey-endpoints", cat: "Identity & sign-in", kind: "json",
+    featured: true,
     desc: "Where to set up passkeys",
     spec: "https://w3c.github.io/webappsec-passkey-endpoints/",
     mdn: "https://developer.mozilla.org/en-US/docs/Web/Security/Authentication/Passkeys",
@@ -182,12 +186,14 @@ export const CHECKS: Check[] = [
   },
   {
     path: "/.well-known/apple-app-site-association", cat: "Apps & browsers", kind: "json",
+    featured: true,
     desc: "iOS Universal Links",
     spec: "https://developer.apple.com/documentation/xcode/supporting-associated-domains",
     learn: "Makes links to your site open in your iPhone app instead of Safari, and lets iOS autofill passwords across app and web. Note: no .json extension.",
   },
   {
     path: "/.well-known/assetlinks.json", cat: "Apps & browsers", kind: "json",
+    featured: true,
     desc: "Android App Links",
     spec: "https://developers.google.com/digital-asset-links/v1/getting-started",
     learn: "Android's version of the above: proves an app belongs to this domain, so links open straight in the app and passwords are shared.",
@@ -368,6 +374,13 @@ export const CHECKS: Check[] = [
     learn: "Experimental: lets AI shopping agents discover how to browse and buy from a store. The spec is still settling.",
   },
   {
+    path: "/.well-known/http-message-signatures-directory", cat: "AI, agents & APIs", kind: "json",
+    experimental: true,
+    desc: "Web Bot Auth: keys bots sign requests with",
+    spec: "https://datatracker.ietf.org/doc/draft-meunier-http-message-signatures-directory/",
+    learn: "Anyone can claim to be Googlebot in a User-Agent. With Web Bot Auth, a bot or AI agent signs every request and publishes its public keys here, so sites can check the signature and tell real crawlers from fakes. A new IETF draft that Cloudflare already verifies.",
+  },
+  {
     path: "/.well-known/ai-plugin.json", cat: "AI, agents & APIs", kind: "json",
     deprecated: "2024-04",
     desc: "ChatGPT plugin manifest",
@@ -525,6 +538,13 @@ export const CHECKS: Check[] = [
     learn: "Tile icons for pinning a site to the Windows 8/10 Start menu. A relic that favicon generators still produce.",
   },
   {
+    path: "/opensearch.xml", cat: "Icons & app", kind: "xml",
+    desc: "Lets the browser search this site",
+    spec: "https://github.com/dewitt/opensearch",
+    mdn: "https://developer.mozilla.org/en-US/docs/Web/XML/Guides/OpenSearch",
+    learn: "Ever typed a site's name in Chrome's address bar, pressed Tab, and searched that site directly? This file is how. It tells the browser where the site's search page is. The page links to it with <link rel=\"search\">, and /opensearch.xml is the most common location.",
+  },
+  {
     path: "/security.txt", cat: "Legacy & misconfig", kind: "securitytxt",
     desc: "security.txt in the old location",
     spec: "https://www.rfc-editor.org/rfc/rfc9116#section-3",
@@ -543,5 +563,19 @@ export const CHECKS: Check[] = [
     spec: "https://learn.microsoft.com/en-us/previous-versions/windows/silverlight/dotnet-windows-silverlight/cc197955(v=vs.95)",
     mdn: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS",
     learn: "Silverlight's version of crossdomain.xml. If you find one, it's almost certainly forgotten, and a wildcard there is the same risk.",
+  },
+
+  // ───── easter eggs ─────
+  {
+    path: "/", cat: "Easter eggs & hidden pages", kind: "homepage",
+    desc: "Hidden messages in the homepage",
+    spec: "https://xclacksoverhead.org/",
+    learn: "Developers hide things where only other developers look: job ads in HTML comments, ASCII art, and joke HTTP headers. The most famous is X-Clacks-Overhead: GNU Terry Pratchett, a tribute from his novels where a name kept moving through the network is never forgotten. Open your browser's DevTools on any site you like and look.",
+  },
+  {
+    path: "/cdn-cgi/trace", cat: "Easter eggs & hidden pages", kind: "cftrace",
+    desc: "Cloudflare's hidden diagnostics page",
+    spec: "https://developers.cloudflare.com/fundamentals/reference/cdn-cgi-endpoint/",
+    learn: "Every site behind Cloudflare has this page, even though the site's owner never created it. It shows which Cloudflare data center answered, the HTTP and TLS versions, and your IP as Cloudflare sees it. Try it on a site in your browser: the answer will be about you, not about this checker.",
   },
 ];

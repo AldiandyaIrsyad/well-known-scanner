@@ -54,7 +54,7 @@
 
     <h3>How it works</h3>
     <p>
-      The checker requests <span class="js-count">86</span> fixed, public paths on the domain you enter, from
+      The checker requests <span class="js-count">90</span> fixed, public paths on the domain you enter, from
       Cloudflare's network. It never logs in, never follows links, doesn't follow redirects (except
       <code>example.com</code> ⇄ <code>www.example.com</code>), and reads at most 64 KB of each file.
       It also requests two random paths to spot servers that answer "200 OK" to everything.
@@ -70,8 +70,9 @@
 
     <h3>For site owners</h3>
     <p>
-      Requests come with the User-Agent <code>WellKnownChecker/1.0 (+https://wellknown.aldiandyainf.com/#about)</code>
-      and only happen when someone checks your domain. Questions or problems?
+      Requests only happen when someone checks your domain. They use a normal Chrome User-Agent,
+      because many sites stall anything that doesn't look like a browser, and they identify
+      this checker with the header <code>From: https://wellknown.aldiandyainf.com/#about</code>. Questions or problems?
       <a href="https://github.com/AldiandyaIrsyad/well-known-checker/issues" target="_blank" rel="noopener">Open an issue</a>.
     </p>
   </section>

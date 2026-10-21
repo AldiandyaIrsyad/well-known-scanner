@@ -17,6 +17,11 @@ const FUTURE = "2027-10-20T00:00:00Z";
 
 const cases: [name: string, path: string, probe: Probe, want: State, note: string, canary?: Probe][] = [
   ["404 is missing", "/.well-known/security.txt", status(404), "missing", "HTTP 404"],
+  ["upstream 503 isn't evidence a file is missing", "/.well-known/security.txt", status(503), "error", "availability unknown"],
+  ["Cloudflare 520 is an upstream error", "/.well-known/security.txt", status(520), "error", "HTTP 520"],
+  ["Cloudflare 522 is an upstream error", "/.well-known/security.txt", status(522), "error", "HTTP 522"],
+  ["rate limiting isn't evidence a file is missing", "/.well-known/security.txt", status(429), "error", "rate limited"],
+  ["homepage failures aren't ordinary pages without hidden messages", "/", status(502), "error", "availability unknown"],
   ["network error", "/.well-known/nodeinfo", { url: "", size: 0, ms: 0, error: "connection refused" }, "error", "refused"],
   ["unresolvable subdomain is missing", "/.well-known/mta-sts.txt", { url: "", size: 0, ms: 0, error: "internal error" }, "missing", "subdomain"],
   ["subdomain timeout is still an error", "/.well-known/mta-sts.txt", { url: "", size: 0, ms: 0, error: "Timed out after 8s" }, "error", "Timed out"],
@@ -59,6 +64,8 @@ const cases: [name: string, path: string, probe: Probe, want: State, note: strin
 
   ["favicon", "/favicon.ico", { url: "", status: 200, contentType: "image/x-icon", size: 1660, ms: 0 }, "found", "image/x-icon · 1.6 KB"],
   ["favicon served as text", "/favicon.ico", ok("nope"), "invalid", "Not an image"],
+  ["real ICO with the wrong content type", "/favicon.ico", ok("\0\0\u0001\0\u0001\0\u0010\u0010"), "invalid", 'ICO image, but served as "text/plain"'],
+  ["real PNG with the wrong content type", "/apple-touch-icon.png", ok("�PNG\r\n\u001a\n"), "invalid", "PNG image"],
 
   ["deprecated file", "/.well-known/related-website-set.json", ok(`{"primary":"https://example.com"}`, "application/json"), "deprecated", "Deprecated since 2026-04"],
   ["empty text file", "/humans.txt", ok("  \n"), "invalid", "Empty"],
@@ -92,6 +99,81 @@ Sitemap: https://example.com/news.xml
     );
     expect(analyze(check("/robots.txt"), ok("User-agent: *\nDisallow: /\n")).note).toBe("blocks all crawlers");
     expect(analyze(check("/robots.txt"), ok("hello world")).state).toBe("invalid");
+  });
+});
+
+describe("easter eggs", () => {
+  const home = (body: string, headers: Record<string, string> = {}): Probe => ({
+    url: "", status: 200, contentType: "text/html", body, size: body.length, ms: 0, headers,
+  });
+
+  it("finds joke and recruiting headers, ignores noisy ones", () => {
+    const v = analyze(check("/"), home("<html></html>", {
+      "x-clacks-overhead": "GNU Terry Pratchett",
+      "x-hacker": "If you're reading this, you should visit example.com/jobs",
+      "content-security-policy": "default-src careers.example.com",
+      "content-type": "text/html",
+    }));
+    expect(v.state).toBe("found");
+    expect(v.note).toBe("2 hidden messages");
+    expect(v.egg).toContain("x-clacks-overhead: GNU Terry Pratchett");
+    expect(v.egg).toContain("x-hacker:");
+    expect(v.egg).not.toContain("content-security-policy");
+  });
+
+  it("finds hiring messages and ASCII art in HTML comments", () => {
+    const art = [
+      "   _____________________  ",
+      "  /  ___  \\_/  ___  \\  ",
+      " |  (o o)  |  (o o)  |  ",
+      "  \\___^___/ \\___^___/  ",
+      "   ~~~~~~~~~~~~~~~~~~~   ",
+    ].join("\n");
+    const v = analyze(check("/"), home(`<html><!-- We're hiring! https://example.com/jobs --><!-- build 1234 --><!--\n${art}\n--></html>`));
+    expect(v.note).toBe("2 hidden messages");
+    expect(v.egg).toContain("We're hiring!");
+    expect(v.egg).toContain("(o o)");
+    expect(v.egg).not.toContain("build 1234");
+  });
+
+  it("is quiet about an ordinary homepage, and never calls it a fake 200", () => {
+    const v = analyze(check("/"), home("<!doctype html><html><!-- Google Tag Manager --><!--[if IE]>old<![endif]--></html>"),
+      { url: "", status: 200, contentType: "text/html", size: 99, ms: 0 });
+    expect(v).toEqual({ state: "missing", note: "No hidden messages found" });
+  });
+
+  it.each(["/.well-known/security.txt", "/security.txt"])("doesn't mark the official Hiring field in %s as an easter egg", (path) => {
+    const v = analyze(check(path),
+      ok(`Contact: mailto:a@b.c\nExpires: ${FUTURE}\nHiring: https://example.com/security-jobs\n`), undefined, NOW);
+    expect(v.state).toBe("found");
+    expect(v.note).toContain("hiring link");
+    expect(v.egg).toBeUndefined();
+  });
+
+  it("finds messages in robots.txt comments", () => {
+    const v = analyze(check("/robots.txt"), ok("# Hello, developer! We're hiring: https://example.com/careers\nUser-agent: *\nDisallow:\n"));
+    expect(v.note).toContain("hidden message in comments");
+    expect(v.egg).toContain("We're hiring");
+    expect(analyze(check("/robots.txt"), ok("# Block admin pages\nUser-agent: *\nDisallow: /admin\n")).egg).toBeUndefined();
+  });
+});
+
+describe("hidden pages and new files", () => {
+  it("reads Cloudflare's trace page", () => {
+    const body = "fl=29f1\nh=example.com\nip=203.0.113.9\nts=1792435557.1\nhttp=http/2\ncolo=SIN\ntls=TLSv1.3\nsni=plaintext\nwarp=off\n";
+    expect(analyze(check("/cdn-cgi/trace"), ok(body)).note).toBe("answered by Cloudflare data center SIN · HTTP/2 · TLSv1.3");
+    expect(analyze(check("/cdn-cgi/trace"), ok("hello")).state).toBe("invalid");
+  });
+
+  it("names the OpenSearch engine", () => {
+    const xml = `<?xml version="1.0"?><OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"><ShortName>GitHub</ShortName></OpenSearchDescription>`;
+    expect(analyze(check("/opensearch.xml"), ok(xml, "application/opensearchdescription+xml")).note).toBe('Browser search engine: "GitHub"');
+  });
+
+  it("counts Web Bot Auth keys", () => {
+    const v = analyze(check("/.well-known/http-message-signatures-directory"),
+      ok(`{"keys":[{"kty":"OKP"},{"kty":"OKP"}]}`, "application/http-message-signatures-directory+json"));
+    expect(v.note).toBe("2 bot signing key(s)");
   });
 });
 

@@ -12,6 +12,8 @@ export type Kind =
   | "adstxt" // ads.txt / app-ads.txt seller lines
   | "crossdomain" // Flash/Silverlight policy, wildcard = risky
   | "image" // an image file
+  | "homepage" // the site's front page, searched for hidden messages in headers and HTML comments
+  | "cftrace" // Cloudflare's /cdn-cgi/trace diagnostics page
   | "any"; // anything non-HTML with a 2xx
 
 export interface Check {
@@ -23,6 +25,8 @@ export interface Check {
   /** When it was deprecated, e.g. "2026-04". */
   deprecated?: string;
   experimental?: boolean;
+  /** Shown in the first group of useful starting points, before topic groups. */
+  featured?: boolean;
   desc: string;
   spec: string;
   /** MDN page, only where one genuinely covers this file. */
@@ -42,6 +46,8 @@ export interface Probe {
   body?: string;
   ms: number;
   error?: string;
+  /** All response headers; only collected for the homepage check. */
+  headers?: Record<string, string>;
 }
 
 export type State =
@@ -57,10 +63,12 @@ export type State =
 export interface Verdict {
   state: State;
   note: string;
+  /** A hidden message found in the response: a job ad, a joke header, ASCII art. */
+  egg?: string;
 }
 
 /** One line of the NDJSON stream from /api/check. */
 export type ScanEvent =
   | { type: "meta"; domain: string; host: string; batch: number }
-  | { type: "result"; batch: number; path: string; state: State; note: string; probe: Probe }
+  | { type: "result"; batch: number; path: string; state: State; note: string; egg?: string; probe: Probe }
   | { type: "done"; batch: number; ms: number };

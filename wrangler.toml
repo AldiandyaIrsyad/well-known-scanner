@@ -1,11 +1,15 @@
 name = "well-known-checker"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
+# Scan public URLs even within our own zone, including sites hosted by Workers.
+compatibility_flags = ["global_fetch_strictly_public"]
+workers_dev = true
+routes = [{ pattern = "wellknown.aldiandyainf.com", custom_domain = true }]
 
 # Regenerates public/checks.json from src/checks/list.ts before `wrangler dev` and `wrangler deploy`.
 [build]
 command = "node scripts/dump-checks.ts"
-watch_dir = "src/checks"
+watch_dir = "src"
 
 # Static frontend. Asset requests are free and don't count as Worker invocations;
 # only /api/* runs the Worker.

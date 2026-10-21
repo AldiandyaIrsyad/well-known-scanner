@@ -15,6 +15,8 @@
   --none: #7a7f7c;
   --none-bg: #eeede8;
   --code-bg: #f1f0eb;
+  --egg: #6d3fc0;
+  --egg-bg: #efe7fb;
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
   color-scheme: light;
 }
@@ -36,6 +38,8 @@
     --none: #8c928f;
     --none-bg: #252928;
     --code-bg: #161918;
+    --egg: #c4a8ff;
+    --egg-bg: #2b2140;
     color-scheme: dark;
   }
 }
@@ -51,7 +55,7 @@ body {
 a { color: var(--accent); }
 code { font-family: var(--mono); font-size: 0.92em; }
 
-header { padding-top: 48px; }
+header.wrap { padding-top: 64px; }
 h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.02em; }
 h1 .dot { font-family: var(--mono); color: var(--accent); }
 .lede { color: var(--muted); margin: 0 0 20px; }
@@ -125,6 +129,7 @@ main { padding-top: 28px; padding-bottom: 32px; }
   margin: 0 0 8px;
 }
 .list { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.group-blurb { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
 details { border-top: 1px solid var(--line); }
 details:first-child { border-top: 0; }
 summary {
@@ -158,6 +163,7 @@ summary > .desc { grid-column: 2; }
 .tag { font: 600 10px system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.05em; color: var(--warn); border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-left: 8px; vertical-align: 2px; }
 .learn { margin: 0 0 12px; font-size: 14px; line-height: 1.55; max-width: 68ch; }
 .preview { display: block; max-width: 96px; max-height: 96px; border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); padding: 6px; }
+details.missing { background: var(--none-bg); }
 details.missing .path { color: var(--muted); font-weight: 500; }
 
 .detail { padding: 0 14px 14px 36px; font-size: 13px; }
@@ -205,10 +211,16 @@ pre {
 }
 
 @media (max-width: 520px) {
-  header { padding-top: 28px; }
+  header.wrap { padding-top: 40px; }
   h1 { font-size: 24px; }
   form { flex-direction: column; }
   button[type="submit"] { padding: 12px; }
 }
 .hostnote { font-size: 14px; background: var(--none-bg); padding: 8px 12px; border-radius: 8px; margin: 14px 0 0; }
 .notfound { padding-top: 64px; }
+
+.s-egg { background: var(--egg-bg); color: var(--egg); }
+.tag-egg { color: var(--egg); }
+.egg { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: var(--egg-bg); }
+.egg strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--egg); margin-bottom: 6px; }
+.egg pre { background: transparent; border: 0; padding: 0; max-height: 280px; color: var(--text); }

@@ -3,8 +3,14 @@ import { batchOf, canaryPaths, isWellKnown, urlFor } from "./checks/checks.ts";
 import type { Probe, ScanEvent } from "./checks/types.ts";
 
 export const MAX_BODY = 64 * 1024; // bytes kept per response
-// Names the site so admins who see it in their logs know what it is and who to contact.
-export const USER_AGENT = "WellKnownChecker/1.0 (+https://wellknown.aldiandyainf.com/#about)";
+// Many sites (Tokopedia, for one) silently stall any request whose User-Agent isn't a plain
+// browser string, even with a browser string plus our name appended. So we send a normal Chrome
+// User-Agent, and identify ourselves in the standard From header instead, so admins reading
+// their logs can still see what this is. Bump the Chrome version now and then: very old
+// versions start to look suspicious too.
+export const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+export const FROM = "https://wellknown.aldiandyainf.com/#about";
 
 export interface ScanOptions {
   /** Injected for tests; defaults to the global fetch. */
@@ -14,6 +20,8 @@ export interface ScanOptions {
   concurrency?: number;
   /** Cloudflare edge-cache TTL for upstream responses, so repeat scans are cheap. */
   cacheTtl?: number;
+  /** Collect every response header into the probe (only the homepage check needs them). */
+  keepHeaders?: boolean;
 }
 
 /**
@@ -35,10 +43,15 @@ export async function scanBatch(domain: string, batch: number, emit: (e: ScanEve
   ]);
 
   await pool(batchOf(batch), opts.concurrency ?? 6, async (c) => {
-    const p = await probe(urlFor(c, domain, host));
+    const p = await probeUrl(urlFor(c, domain, host), { ...opts, keepHeaders: c.kind === "homepage" });
     const v = analyze(c, p, isWellKnown(c) ? wkCanary : rootCanary);
-    if (c.kind === "image") delete p.body; // binary; the browser shows the image straight from the site
-    await emit({ type: "result", batch, path: c.path, state: v.state, note: v.note, probe: p });
+    // Binary images are shown straight from the site; the homepage's HTML and headers are only
+    // needed to find the hidden messages, which travel in `egg`.
+    if (c.kind === "image" || c.kind === "homepage") {
+      delete p.body;
+      delete p.headers;
+    }
+    await emit({ type: "result", batch, path: c.path, state: v.state, note: v.note, egg: v.egg, probe: p });
   });
 
   await emit({ type: "done", batch, ms: Date.now() - started });
@@ -66,7 +79,7 @@ export async function probeUrl(url: string, opts: ScanOptions = {}): Promise<Pro
     const res = await (opts.fetch ?? fetch)(url, {
       method: "GET",
       redirect: "manual", // a redirect is part of the answer
-      headers: { "user-agent": USER_AGENT, accept: "*/*" },
+      headers: { "user-agent": USER_AGENT, from: FROM, accept: "*/*" },
       signal: AbortSignal.timeout(timeoutMs),
       ...(opts.cacheTtl ? { cf: { cacheTtl: opts.cacheTtl, cacheEverything: true } } : {}),
     });
@@ -81,6 +94,7 @@ export async function probeUrl(url: string, opts: ScanOptions = {}): Promise<Pro
       truncated,
       body: text,
       ms: Date.now() - t0,
+      ...(opts.keepHeaders ? { headers: Object.fromEntries(res.headers) } : {}),
     };
   } catch (e: any) {
     const error = e?.name === "TimeoutError" ? `Timed out after ${timeoutMs / 1000}s` : String(e?.message ?? e);

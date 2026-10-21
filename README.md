@@ -23,10 +23,14 @@ browser ──GET index.html, app.js, checks.json──▶ Workers Assets (stati
 
 - **Why a backend at all:** browsers can't read `https://other-site/.well-known/*` unless that site
   sends CORS headers, and most don't.
-- **Why batches:** a Worker invocation on the free plan may make 50 outbound requests. 86 checks
+- **Why batches:** a Worker invocation on the free plan may make 50 outbound requests. 90 checks
   are split into 2 batches of ≤46 (+1 homepage +2 canaries = 49).
-- **Cost:** static files are free and unlimited. Each scan is 2 Worker invocations, so the free
-  tier (100k/day) covers ~50k scans a day. Upstream responses are cached at the edge for 5 minutes.
+- **Capacity on Workers Free:** static asset requests are free and unlimited. Each complete scan
+  uses 2 Worker requests, so the account's shared 100,000-request daily allowance supports up to
+  ~50,000 scans, less other API requests and usage by other Workers. The allowance resets at
+  midnight UTC (07:00 in Jakarta). This is a request-budget estimate, not a load-test result;
+  the Free plan also limits each invocation to 10 ms of CPU time. Upstream responses are cached
+  at the edge for 5 minutes, but cached upstream fetches do not reduce the 2 API calls per scan.
 - **Abuse guards:** only fetches paths from the fixed list, never follows redirects (except the
   www hop), rejects IPs, `localhost` and internal TLDs, keeps at most 64 KB per response, and
   rate-limits each IP to 20 calls/min (10 scans).
@@ -63,5 +67,6 @@ npx wrangler login  # once, opens the browser
 npm run deploy      # prints https://well-known-checker.<your-subdomain>.workers.dev
 ```
 
-To use your own domain: Cloudflare dashboard → Workers & Pages → well-known-checker → Settings →
-Domains & Routes → Add custom domain.
+`wrangler.toml` attaches `wellknown.aldiandyainf.com` as a Custom Domain and also enables the
+`workers.dev` address. Deploy from the Cloudflare account that owns the active
+`aldiandyainf.com` zone. Cloudflare creates the Custom Domain's DNS record and certificate.
